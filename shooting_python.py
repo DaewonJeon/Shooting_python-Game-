@@ -16,7 +16,9 @@ YELLOW = (255, 255, 0)
 GREY = (100, 100, 100)   
 GREEN = (50, 200, 80)    
 GOLD = (255, 215, 0)     
-ORANGE = (255, 165, 0)   
+ORANGE = (255, 165, 0)
+PURPLE = (180, 50, 255)  # 고레벨 적 색상
+DARK_RED = (150, 0, 0)   # 최고레벨 적 색상
 
 # 버튼용 색상
 BTN_RED = (255, 107, 107)    
@@ -30,7 +32,7 @@ SCREEN_HEIGHT = 600
 FPS = 60
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Shooting Python")
+pygame.display.set_caption("Shooting Python - Stage Version")
 clock = pygame.time.Clock()
 
 # 폰트 설정
@@ -45,7 +47,7 @@ GRAVITY = 0.8
 PLAYER_SPEED = 5
 JUMP_FORCE = 16       
 BULLET_SPEED = 15     
-ENEMY_SPEED = 3       
+# ENEMY_SPEED는 이제 변수로 관리됨 (스테이지별 다름)
 
 # --- 게임 상태 상수 ---
 STATE_MENU = 0      
@@ -136,9 +138,7 @@ class Star:
 class Item(pygame.sprite.Sprite):
     def __init__(self, x, y, item_type):
         super().__init__()
-        self.item_type = item_type # "speed", "shield", "heart"
-
-        # 아이템 이미지 생성 (투명 배경)
+        self.item_type = item_type 
         self.image = pygame.Surface((32, 32), pygame.SRCALPHA)
 
         if item_type == "speed":
@@ -151,24 +151,21 @@ class Item(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(x, y))
 
     def update(self):
-        self.rect.y += 2 # 천천히 떨어짐
+        self.rect.y += 2 
         if self.rect.top > SCREEN_HEIGHT:
             self.kill()
 
-    # ❤️ 하트 모양 그리기
     def draw_heart(self, surface, color):
         pygame.draw.circle(surface, color, (10, 12), 8)
         pygame.draw.circle(surface, color, (22, 12), 8)
         pygame.draw.polygon(surface, color, [(4, 16), (28, 16), (16, 30)])
 
-    # 👟 신발 모양 그리기
     def draw_shoe(self, surface, color):
         pygame.draw.rect(surface, color, (5, 20, 22, 7))
         pygame.draw.rect(surface, (255, 255, 255), (5, 23, 22, 3))
         pygame.draw.polygon(surface, color, [(7, 20), (20, 10), (27, 12), (25, 20)])
         pygame.draw.line(surface, (255, 255, 255), (12, 17), (20, 14), 2)
 
-    # 🛡 쉴드 모양 그리기
     def draw_shield(self, surface, color):
         pygame.draw.polygon(surface, color, [(16, 4), (26, 14), (20, 26), (12, 26), (6, 14)])
         pygame.draw.circle(surface, (255, 255, 255, 80), (14, 12), 4)
@@ -190,9 +187,8 @@ class Player(pygame.sprite.Sprite):
         self.invincible_timer = 0    
         self.visible = True          
 
-        # [아이템 능력치]
-        self.speed_buff = 0       # 속도 버프 남은 시간
-        self.shield = False       # 쉴드 보유 여부
+        self.speed_buff = 0       
+        self.shield = False       
 
     def update(self, platforms):
         if self.invincible:
@@ -206,10 +202,9 @@ class Player(pygame.sprite.Sprite):
                 else:
                     self.visible = True
         
-        # [속도 버프 처리]
         current_speed = PLAYER_SPEED
         if self.speed_buff > 0:
-            current_speed = PLAYER_SPEED * 1.5 # 1.5배 빨라짐
+            current_speed = PLAYER_SPEED * 1.5 
             self.speed_buff -= 1
 
         keys = pygame.key.get_pressed()
@@ -251,17 +246,16 @@ class Player(pygame.sprite.Sprite):
         return bullet
     
     def get_hit(self):
-        # [쉴드가 있으면 쉴드만 깨지고 데미지 없음]
         if self.shield:
             self.shield = False
             self.invincible = True
-            self.invincible_timer = 60 # 쉴드 깨질 땐 짧게 무적 (1초)
-            return False # 데미지 입지 않음 (False 반환)
+            self.invincible_timer = 60 
+            return False 
 
         if not self.invincible:
             self.invincible = True
             self.invincible_timer = 120 
-            return True # 데미지 입음 (True 반환)
+            return True 
         return False 
 
     def draw_custom(self, surface, shake_x=0, shake_y=0):
@@ -277,7 +271,6 @@ class Player(pygame.sprite.Sprite):
             gun_x -= 5 if self.facing_right else -5
         pygame.draw.rect(surface, GREY, (gun_x - (5 if self.facing_right else -5), draw_rect.centery, 15, 8))
 
-        # [쉴드 이펙트 그리기]
         if self.shield:
             cx = draw_rect.x + draw_rect.width // 2
             cy = draw_rect.y + draw_rect.height // 2
@@ -311,13 +304,16 @@ class Bullet(pygame.sprite.Sprite):
             self.kill()
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, player):
+    # [수정] speed와 color를 인자로 받도록 변경
+    def __init__(self, x, y, player, speed, color):
         super().__init__()
         self.image = pygame.Surface((35, 35))
-        self.image.fill(RED) 
+        self.image.fill(color) 
+        self.color = color # 그리기 위해 저장
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
         self.player = player
+        self.speed = speed # 개별 속도
         self.vel_y = 0
     
     def update(self, platforms, enemies):
@@ -325,13 +321,13 @@ class Enemy(pygame.sprite.Sprite):
         dist_y = self.player.rect.centery - self.rect.centery
 
         if abs(dist_x) > 5:
-            if dist_x > 0: self.rect.x += ENEMY_SPEED
-            else: self.rect.x -= ENEMY_SPEED
+            if dist_x > 0: self.rect.x += self.speed # 개별 속도 사용
+            else: self.rect.x -= self.speed
         elif abs(dist_y) > 50:
             if self.rect.centerx < SCREEN_WIDTH // 2:
-                self.rect.x += ENEMY_SPEED
+                self.rect.x += self.speed
             else:
-                self.rect.x -= ENEMY_SPEED
+                self.rect.x -= self.speed
         
         self.vel_y += GRAVITY
         self.rect.y += self.vel_y
@@ -346,13 +342,13 @@ class Enemy(pygame.sprite.Sprite):
             if other != self: 
                 if self.rect.colliderect(other.rect):
                     if self.rect.centerx < other.rect.centerx:
-                        self.rect.x -= ENEMY_SPEED 
+                        self.rect.x -= self.speed 
                     else:
-                        self.rect.x += ENEMY_SPEED 
+                        self.rect.x += self.speed 
     
     def draw_custom(self, surface, shake_x=0, shake_y=0):
         draw_rect = self.rect.move(shake_x, shake_y)
-        pygame.draw.rect(surface, RED, draw_rect)
+        pygame.draw.rect(surface, self.color, draw_rect) # 저장된 색상 사용
         pygame.draw.rect(surface, BLACK, (draw_rect.x + 5, draw_rect.y + 10, 8, 8))
         pygame.draw.rect(surface, BLACK, (draw_rect.right - 13, draw_rect.y + 10, 8, 8))
         pygame.draw.line(surface, BLACK, (draw_rect.x + 2, draw_rect.y + 8), (draw_rect.x + 15, draw_rect.y + 15), 3)
@@ -364,7 +360,7 @@ def init_game():
     platforms = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
     enemies = pygame.sprite.Group()
-    items = pygame.sprite.Group() # [아이템 그룹]
+    items = pygame.sprite.Group() 
 
     platforms.add(Platform(0, SCREEN_HEIGHT - 20, SCREEN_WIDTH, 20, GREEN))
     platforms.add(Platform(50, 450, 150, 20))
@@ -414,14 +410,21 @@ def main():
     high_scores = [0, 0, 0] 
     player_lives = 3 
 
+    # [NEW] 스테이지 관련 변수
+    current_stage = 1
+    kill_count = 0
+    kill_goal = 10 # 다음 스테이지까지 필요한 킬 수
+    enemy_spawn_time = 1500 # 적 생성 주기 (초기 1.5초)
+    current_enemy_speed = 3 # 적 초기 속도
+    stage_text_timer = 0 # 스테이지 텍스트 표시 시간
+
     particles = []          
     screen_shake = 0        
     background_stars = [Star() for _ in range(50)] 
 
     ENEMY_SPAWN_EVENT = pygame.USEREVENT + 1
-    pygame.time.set_timer(ENEMY_SPAWN_EVENT, 1500) 
+    pygame.time.set_timer(ENEMY_SPAWN_EVENT, enemy_spawn_time) 
 
-    # [아이템 생성 타이머 (7초마다)]
     ITEM_SPAWN_EVENT = pygame.USEREVENT + 2
     pygame.time.set_timer(ITEM_SPAWN_EVENT, 7000)
 
@@ -430,11 +433,9 @@ def main():
         pygame.mixer.music.load("music.mp3")
         pygame.mixer.music.set_volume(current_volume)
         pygame.mixer.music.play(-1)
-        print("배경음악 재생 성공")
     except:
-        print("주의: music.mp3 파일을 찾을 수 없습니다.")
+        pass
 
-    # === 버튼 생성 ===
     btn_width, btn_height = 250, 60
     center_x = SCREEN_WIDTH // 2 - btn_width // 2
     
@@ -471,6 +472,14 @@ def main():
                     player, all_sprites, platforms, bullets, enemies, items = init_game()
                     score = 0
                     player_lives = 3 
+                    # [NEW] 게임 시작 시 스테이지 초기화
+                    current_stage = 1
+                    kill_count = 0
+                    enemy_spawn_time = 1500
+                    current_enemy_speed = 3
+                    stage_text_timer = 120 # 2초간 스테이지 텍스트 표시
+                    pygame.time.set_timer(ENEMY_SPAWN_EVENT, enemy_spawn_time)
+                    
                     start_ticks = pygame.time.get_ticks()
                     particles = []
                     game_state = STATE_PLAYING
@@ -509,11 +518,17 @@ def main():
                 
                 if event.type == ENEMY_SPAWN_EVENT:
                     spawn_x = random.randint(0, SCREEN_WIDTH)
-                    enemy = Enemy(spawn_x, -50, player)
+                    # [NEW] 스테이지에 따른 색상 결정
+                    spawn_color = RED
+                    if current_stage == 2: spawn_color = ORANGE
+                    elif current_stage >= 3: spawn_color = PURPLE
+                    if current_stage >= 5: spawn_color = DARK_RED
+
+                    # [NEW] 스테이지 속도 반영
+                    enemy = Enemy(spawn_x, -50, player, current_enemy_speed, spawn_color)
                     all_sprites.add(enemy)
                     enemies.add(enemy)
                 
-                # [아이템 생성 이벤트]
                 if event.type == ITEM_SPAWN_EVENT:
                     ix = random.randint(50, SCREEN_WIDTH - 50)
                     item_type = random.choice(["speed", "shield", "heart"])
@@ -541,6 +556,14 @@ def main():
                         player, all_sprites, platforms, bullets, enemies, items = init_game()
                         score = 0
                         player_lives = 3 
+                        # 재시작 시 스테이지 초기화
+                        current_stage = 1
+                        kill_count = 0
+                        enemy_spawn_time = 1500
+                        current_enemy_speed = 3
+                        stage_text_timer = 120
+                        pygame.time.set_timer(ENEMY_SPAWN_EVENT, enemy_spawn_time)
+
                         start_ticks = pygame.time.get_ticks()
                         particles = []
                         game_state = STATE_PLAYING
@@ -599,15 +622,13 @@ def main():
                 if p.life <= 0 or p.size <= 0:
                     particles.remove(p)
 
-            # [아이템 획득 처리] (하트 먹고 죽는 버그 수정됨)
             item_hits = pygame.sprite.spritecollide(player, items, True)
             for item in item_hits:
                 if item.item_type == "speed":
-                    player.speed_buff = FPS * 5 # 5초간 지속
+                    player.speed_buff = FPS * 5 
                 elif item.item_type == "shield":
                     player.shield = True
                 elif item.item_type == "heart":
-                    # [버그 수정] 목숨 최대 3개까지만 증가 (3개 미만일 때만 +1)
                     if player_lives < 3:
                         player_lives += 1
 
@@ -615,12 +636,25 @@ def main():
             for enemy, bullet_list in hits.items():
                 score += 100
                 screen_shake = 10 
+                # [NEW] 스테이지 진행 로직
+                kill_count += 1
+                if kill_count >= kill_goal:
+                    current_stage += 1
+                    kill_count = 0 # 카운트 초기화
+                    
+                    # 난이도 상승
+                    current_enemy_speed += 0.5 # 속도 증가
+                    enemy_spawn_time = max(500, enemy_spawn_time - 200) # 생성시간 단축 (최소 0.5초)
+                    pygame.time.set_timer(ENEMY_SPAWN_EVENT, enemy_spawn_time)
+                    
+                    stage_text_timer = 180 # 3초간 스테이지 텍스트 표시
+
                 for _ in range(10):
-                    particles.append(Particle(enemy.rect.centerx, enemy.rect.centery, ORANGE))
-                    particles.append(Particle(enemy.rect.centerx, enemy.rect.centery, RED))
+                    # 적 파편 색상도 적 색상에 맞춤
+                    particles.append(Particle(enemy.rect.centerx, enemy.rect.centery, enemy.color))
             
             if pygame.sprite.spritecollide(player, enemies, False):
-                if player.get_hit(): # 데미지를 입었으면 (쉴드 X, 무적 X)
+                if player.get_hit(): 
                     player_lives -= 1
                     screen_shake = 30 
                     
@@ -634,14 +668,13 @@ def main():
                         high_scores = high_scores[:3]
                         game_state = STATE_GAMEOVER
                 else:
-                    # [수정됨] 쉴드 깨질 때 노란 파편 효과 삭제 (코드 제거됨)
                     pass
 
             for sprite in all_sprites:
                 if sprite != player and sprite not in enemies and sprite not in items:
                     screen.blit(sprite.image, (sprite.rect.x + shake_x, sprite.rect.y + shake_y))
             
-            for item in items: # 아이템 그리기
+            for item in items: 
                 screen.blit(item.image, (item.rect.x + shake_x, item.rect.y + shake_y))
 
             for bullet in bullets:
@@ -657,10 +690,19 @@ def main():
             elapsed_seconds = (pygame.time.get_ticks() - start_ticks) / 1000
             score_text = font_ui.render(f"Score: {score}", True, WHITE)
             time_text = font_ui.render(f"Time: {elapsed_seconds:.1f}s", True, WHITE)
+            # [NEW] 스테이지 표시
+            stage_info = font_ui.render(f"Stage: {current_stage}", True, GOLD)
+            
             screen.blit(score_text, (10, 10))
             screen.blit(time_text, (10, 85)) 
+            screen.blit(stage_info, (SCREEN_WIDTH - 150, 10)) # 우측 상단 스테이지 표시
             
             draw_hearts(screen, player_lives)
+
+            # [NEW] 스테이지 전환 텍스트 (화면 중앙)
+            if stage_text_timer > 0:
+                draw_text_center(screen, f"STAGE {current_stage}", font_title, GOLD, -50)
+                stage_text_timer -= 1
 
         elif game_state == STATE_PAUSE:
             for sprite in all_sprites:
