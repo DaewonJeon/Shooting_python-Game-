@@ -1,5 +1,11 @@
 # Shooting_python-Game-
 
+실행 방법!
+
+music.mp3, music2.mp3 (배경음악) 파일을 다운받고, .py 코드를 실행합니다
+(pip install pygame) 필수!!
+
+---
 최근 업데이트
 기획 방향성 (보스 없는 강화 시스템)
 목표: 적을 10마리 잡을 때마다 다음 스테이지로 진입
