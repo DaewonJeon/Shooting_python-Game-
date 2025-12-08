@@ -32,7 +32,7 @@ SCREEN_HEIGHT = 600
 FPS = 60
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Shooting Python - Stage Version")
+pygame.display.set_caption("Shooting Python - Final")
 clock = pygame.time.Clock()
 
 # 폰트 설정
@@ -47,7 +47,6 @@ GRAVITY = 0.8
 PLAYER_SPEED = 5
 JUMP_FORCE = 16       
 BULLET_SPEED = 15     
-# ENEMY_SPEED는 이제 변수로 관리됨 (스테이지별 다름)
 
 # --- 게임 상태 상수 ---
 STATE_MENU = 0      
@@ -304,16 +303,15 @@ class Bullet(pygame.sprite.Sprite):
             self.kill()
 
 class Enemy(pygame.sprite.Sprite):
-    # [수정] speed와 color를 인자로 받도록 변경
     def __init__(self, x, y, player, speed, color):
         super().__init__()
         self.image = pygame.Surface((35, 35))
         self.image.fill(color) 
-        self.color = color # 그리기 위해 저장
+        self.color = color 
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
         self.player = player
-        self.speed = speed # 개별 속도
+        self.speed = speed 
         self.vel_y = 0
     
     def update(self, platforms, enemies):
@@ -321,7 +319,7 @@ class Enemy(pygame.sprite.Sprite):
         dist_y = self.player.rect.centery - self.rect.centery
 
         if abs(dist_x) > 5:
-            if dist_x > 0: self.rect.x += self.speed # 개별 속도 사용
+            if dist_x > 0: self.rect.x += self.speed 
             else: self.rect.x -= self.speed
         elif abs(dist_y) > 50:
             if self.rect.centerx < SCREEN_WIDTH // 2:
@@ -348,7 +346,7 @@ class Enemy(pygame.sprite.Sprite):
     
     def draw_custom(self, surface, shake_x=0, shake_y=0):
         draw_rect = self.rect.move(shake_x, shake_y)
-        pygame.draw.rect(surface, self.color, draw_rect) # 저장된 색상 사용
+        pygame.draw.rect(surface, self.color, draw_rect) 
         pygame.draw.rect(surface, BLACK, (draw_rect.x + 5, draw_rect.y + 10, 8, 8))
         pygame.draw.rect(surface, BLACK, (draw_rect.right - 13, draw_rect.y + 10, 8, 8))
         pygame.draw.line(surface, BLACK, (draw_rect.x + 2, draw_rect.y + 8), (draw_rect.x + 15, draw_rect.y + 15), 3)
@@ -410,13 +408,12 @@ def main():
     high_scores = [0, 0, 0] 
     player_lives = 3 
 
-    # [NEW] 스테이지 관련 변수
     current_stage = 1
     kill_count = 0
-    kill_goal = 10 # 다음 스테이지까지 필요한 킬 수
-    enemy_spawn_time = 1500 # 적 생성 주기 (초기 1.5초)
-    current_enemy_speed = 3 # 적 초기 속도
-    stage_text_timer = 0 # 스테이지 텍스트 표시 시간
+    kill_goal = 10 
+    enemy_spawn_time = 1500 
+    current_enemy_speed = 3 
+    stage_text_timer = 0 
 
     particles = []          
     screen_shake = 0        
@@ -426,15 +423,21 @@ def main():
     pygame.time.set_timer(ENEMY_SPAWN_EVENT, enemy_spawn_time) 
 
     ITEM_SPAWN_EVENT = pygame.USEREVENT + 2
-    pygame.time.set_timer(ITEM_SPAWN_EVENT, 7000)
+    pygame.time.set_timer(ITEM_SPAWN_EVENT, 5000)
 
     current_volume = 0.5
-    try:
-        pygame.mixer.music.load("music.mp3")
-        pygame.mixer.music.set_volume(current_volume)
-        pygame.mixer.music.play(-1)
-    except:
-        pass
+    current_bgm = "music.mp3"
+
+    def play_music(filename):
+        try:
+            pygame.mixer.music.load(filename)
+            pygame.mixer.music.set_volume(current_volume)
+            pygame.mixer.music.play(-1)
+            print(f"Music Playing: {filename}")
+        except:
+            print(f"Error: {filename} not found.")
+
+    play_music("music.mp3")
 
     btn_width, btn_height = 250, 60
     center_x = SCREEN_WIDTH // 2 - btn_width // 2
@@ -472,14 +475,19 @@ def main():
                     player, all_sprites, platforms, bullets, enemies, items = init_game()
                     score = 0
                     player_lives = 3 
-                    # [NEW] 게임 시작 시 스테이지 초기화
+                    
+                    # 게임 초기화
                     current_stage = 1
                     kill_count = 0
                     enemy_spawn_time = 1500
                     current_enemy_speed = 3
-                    stage_text_timer = 120 # 2초간 스테이지 텍스트 표시
+                    stage_text_timer = 120 
                     pygame.time.set_timer(ENEMY_SPAWN_EVENT, enemy_spawn_time)
                     
+                    if current_bgm != "music.mp3":
+                        current_bgm = "music.mp3"
+                        play_music("music.mp3")
+
                     start_ticks = pygame.time.get_ticks()
                     particles = []
                     game_state = STATE_PLAYING
@@ -518,13 +526,11 @@ def main():
                 
                 if event.type == ENEMY_SPAWN_EVENT:
                     spawn_x = random.randint(0, SCREEN_WIDTH)
-                    # [NEW] 스테이지에 따른 색상 결정
                     spawn_color = RED
                     if current_stage == 2: spawn_color = ORANGE
                     elif current_stage >= 3: spawn_color = PURPLE
-                    if current_stage >= 5: spawn_color = DARK_RED
+                    if current_stage >= 4: spawn_color = DARK_RED
 
-                    # [NEW] 스테이지 속도 반영
                     enemy = Enemy(spawn_x, -50, player, current_enemy_speed, spawn_color)
                     all_sprites.add(enemy)
                     enemies.add(enemy)
@@ -556,13 +562,17 @@ def main():
                         player, all_sprites, platforms, bullets, enemies, items = init_game()
                         score = 0
                         player_lives = 3 
-                        # 재시작 시 스테이지 초기화
+                        
                         current_stage = 1
                         kill_count = 0
                         enemy_spawn_time = 1500
                         current_enemy_speed = 3
                         stage_text_timer = 120
                         pygame.time.set_timer(ENEMY_SPAWN_EVENT, enemy_spawn_time)
+
+                        if current_bgm != "music.mp3":
+                            current_bgm = "music.mp3"
+                            play_music("music.mp3")
 
                         start_ticks = pygame.time.get_ticks()
                         particles = []
@@ -636,21 +646,24 @@ def main():
             for enemy, bullet_list in hits.items():
                 score += 100
                 screen_shake = 10 
-                # [NEW] 스테이지 진행 로직
+                # 스테이지 진행 로직
                 kill_count += 1
                 if kill_count >= kill_goal:
                     current_stage += 1
-                    kill_count = 0 # 카운트 초기화
+                    kill_count = 0 
                     
-                    # 난이도 상승
-                    current_enemy_speed += 0.5 # 속도 증가
-                    enemy_spawn_time = max(500, enemy_spawn_time - 200) # 생성시간 단축 (최소 0.5초)
+                    current_enemy_speed += 0.3 
+                    enemy_spawn_time = max(500, enemy_spawn_time - 200) 
                     pygame.time.set_timer(ENEMY_SPAWN_EVENT, enemy_spawn_time)
                     
-                    stage_text_timer = 180 # 3초간 스테이지 텍스트 표시
+                    stage_text_timer = 180 
+
+                    if current_stage == 3:
+                        if current_bgm != "music2.mp3":
+                            current_bgm = "music2.mp3"
+                            play_music("music2.mp3")
 
                 for _ in range(10):
-                    # 적 파편 색상도 적 색상에 맞춤
                     particles.append(Particle(enemy.rect.centerx, enemy.rect.centery, enemy.color))
             
             if pygame.sprite.spritecollide(player, enemies, False):
@@ -667,6 +680,11 @@ def main():
                         high_scores.sort(reverse=True)
                         high_scores = high_scores[:3]
                         game_state = STATE_GAMEOVER
+                        
+                        # [NEW] 게임 오버 시 원래 음악으로 복귀
+                        if current_bgm != "music.mp3":
+                            current_bgm = "music.mp3"
+                            play_music("music.mp3")
                 else:
                     pass
 
@@ -690,16 +708,14 @@ def main():
             elapsed_seconds = (pygame.time.get_ticks() - start_ticks) / 1000
             score_text = font_ui.render(f"Score: {score}", True, WHITE)
             time_text = font_ui.render(f"Time: {elapsed_seconds:.1f}s", True, WHITE)
-            # [NEW] 스테이지 표시
             stage_info = font_ui.render(f"Stage: {current_stage}", True, GOLD)
             
             screen.blit(score_text, (10, 10))
             screen.blit(time_text, (10, 85)) 
-            screen.blit(stage_info, (SCREEN_WIDTH - 150, 10)) # 우측 상단 스테이지 표시
+            screen.blit(stage_info, (SCREEN_WIDTH - 150, 10)) 
             
             draw_hearts(screen, player_lives)
 
-            # [NEW] 스테이지 전환 텍스트 (화면 중앙)
             if stage_text_timer > 0:
                 draw_text_center(screen, f"STAGE {current_stage}", font_title, GOLD, -50)
                 stage_text_timer -= 1
